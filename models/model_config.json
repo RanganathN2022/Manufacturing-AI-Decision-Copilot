@@ -1,0 +1,9 @@
+{
+    "model_type": "RandomForestClassifier",
+    "decision_threshold": 0.5,
+    "target": "Failure_Next_30_Days",
+    "roc_auc": 0.728578426044894,
+    "failure_recall": 0.52,
+    "failure_precision": 0.41,
+    "failure_f1": 0.46
+}
