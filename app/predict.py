@@ -4,6 +4,7 @@ from pathlib import Path
 import joblib
 import pandas as pd
 import shap
+from app.recommendation import generate_recommendation
 
 
 # ============================================================
@@ -222,6 +223,11 @@ def predict_failure(machine_data):
         machine_data,
         top_n=5
     )
+    recommendation = generate_recommendation(
+    machine_data,
+    float(probability),
+    risk_level
+)
 
     # --------------------------------------------------------
     # Final response
@@ -239,5 +245,6 @@ def predict_failure(machine_data):
         "shap_explanation": (
             explanation_df
             .to_dict(orient="records")
-        )
+        ),
+        "maintenance_recommendation": recommendation
     }
