@@ -1,0 +1,73 @@
+MANUFACTURING MACHINE PREVENTIVE MAINTENANCE SOP
+
+Purpose:
+This procedure provides general guidance for preventive maintenance of industrial manufacturing equipment.
+
+MAINTENANCE SCHEDULING
+
+Machines should be inspected according to operating hours, manufacturer recommendations, machine condition, and maintenance history.
+
+Machines with long intervals since their previous maintenance should receive priority for inspection.
+
+VIBRATION INSPECTION
+
+Abnormal vibration can indicate bearing wear, imbalance, misalignment, looseness, lubrication problems, or other mechanical issues.
+
+When elevated vibration is detected:
+
+- Inspect bearings.
+- Check shaft alignment.
+- Inspect couplings.
+- Check mounting and foundation bolts.
+- Verify lubrication condition.
+- Review recent vibration trends.
+
+TEMPERATURE INSPECTION
+
+Elevated machine temperature can indicate:
+
+- Insufficient cooling.
+- Bearing problems.
+- Excessive friction.
+- Lubrication problems.
+- Electrical or motor-related issues.
+
+When abnormal temperature is detected:
+
+- Inspect cooling systems.
+- Check lubrication.
+- Inspect bearings.
+- Check motor condition.
+- Compare temperature with historical operating values.
+
+HIGH OPERATING HOURS
+
+Machines with high accumulated operating hours should receive additional inspection attention.
+
+Inspect wear-prone components including:
+
+- Bearings.
+- Belts.
+- Couplings.
+- Gears.
+- Shafts.
+- Lubrication systems.
+
+FAILURE HISTORY
+
+Machines with repeated previous failures should be reviewed for recurring failure patterns.
+
+Maintenance teams should examine previous maintenance records and identify whether corrective actions addressed the root cause.
+
+MAINTENANCE DOCUMENTATION
+
+Every maintenance activity should record:
+
+- Machine identifier.
+- Date.
+- Operating hours.
+- Observed condition.
+- Components inspected.
+- Components replaced.
+- Corrective actions.
+- Technician observations.

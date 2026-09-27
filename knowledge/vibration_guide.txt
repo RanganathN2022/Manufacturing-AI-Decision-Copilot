@@ -1,0 +1,27 @@
+INDUSTRIAL VIBRATION TROUBLESHOOTING GUIDE
+
+Vibration is an important indicator of mechanical machine condition.
+
+Potential causes of elevated vibration include:
+
+1. Bearing wear
+2. Shaft misalignment
+3. Rotor imbalance
+4. Loose mounting
+5. Coupling problems
+6. Poor lubrication
+7. Gear wear
+
+Recommended inspection sequence:
+
+1. Check recent vibration history.
+2. Inspect bearings.
+3. Check shaft and coupling alignment.
+4. Inspect mounting bolts.
+5. Verify lubrication.
+6. Inspect rotating components.
+7. Compare vibration measurements with historical values.
+
+If vibration remains elevated after basic maintenance, perform a detailed condition assessment.
+
+Vibration should be evaluated together with temperature, operating hours, maintenance history, and previous failure information.

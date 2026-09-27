@@ -1,0 +1,26 @@
+INDUSTRIAL MACHINE TEMPERATURE GUIDE
+
+Elevated temperature can be an indicator of abnormal machine operation.
+
+Potential causes include:
+
+1. Bearing friction
+2. Insufficient lubrication
+3. Cooling system problems
+4. Motor overload
+5. Excessive mechanical friction
+6. Electrical problems
+
+Recommended inspection sequence:
+
+1. Verify temperature measurement.
+2. Compare current temperature with historical values.
+3. Inspect cooling system.
+4. Check lubrication.
+5. Inspect bearings.
+6. Check motor operating condition.
+7. Review recent maintenance activities.
+
+Temperature should not be interpreted in isolation.
+
+Combine temperature information with vibration, operating hours, machine age, maintenance history, and electrical measurements when evaluating machine condition.
