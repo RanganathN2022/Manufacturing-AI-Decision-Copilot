@@ -1,178 +1,272 @@
+
 from pathlib import Path
 import re
+from functools import lru_cache
 
-from sentence_transformers import SentenceTransformer
 import chromadb
+from sentence_transformers import SentenceTransformer
 
 
 # ============================================================
-# PATHS
+# PATH CONFIGURATION
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
-
 CHROMA_DIR = BASE_DIR / "chroma_db"
 
+COLLECTION_NAME = "manufacturing_knowledge"
+
+EMBEDDING_MODEL_NAME = (
+    "sentence-transformers/all-MiniLM-L6-v2"
+)
+
 
 # ============================================================
-# LOAD DOCUMENTS
+# LOAD EMBEDDING MODEL (REUSE)
 # ============================================================
 
-documents = []
+@lru_cache(maxsize=1)
+def get_embedding_model():
 
-for file_path in KNOWLEDGE_DIR.glob("*.txt"):
+    print("Loading embedding model...")
 
-    text = file_path.read_text(
-        encoding="utf-8"
+    model = SentenceTransformer(
+        EMBEDDING_MODEL_NAME
     )
 
-    documents.append({
-        "source": file_path.name,
-        "text": text
-    })
+    print("Embedding model loaded.")
+
+    return model
 
 
-print(
-    f"Documents loaded: {len(documents)}"
-)
+# ============================================================
+# LOAD KNOWLEDGE DOCUMENTS
+# ============================================================
+
+def load_documents():
+
+    documents = []
+
+    if not KNOWLEDGE_DIR.exists():
+        raise FileNotFoundError(
+            f"Knowledge directory not found: {KNOWLEDGE_DIR}"
+        )
+
+    for file_path in sorted(
+        KNOWLEDGE_DIR.glob("*.txt")
+    ):
+
+        text = file_path.read_text(
+            encoding="utf-8"
+        ).strip()
+
+        if text:
+
+            documents.append({
+                "source": file_path.name,
+                "text": text
+            })
+
+    if not documents:
+        raise ValueError(
+            "No valid knowledge documents found."
+        )
+
+    print(
+        f"Documents loaded: {len(documents)}"
+    )
+
+    return documents
 
 
 # ============================================================
 # SECTION-BASED CHUNKING
 # ============================================================
 
-chunks = []
+def create_chunks(documents):
 
-for document in documents:
+    chunks = []
 
-    text = document["text"]
+    for document in documents:
 
-    # Split documents at major section headings.
-    sections = re.split(
-        r"\n(?=[A-Z][A-Z\s]+(?:\n|$))",
-        text
+        text = document["text"]
+
+        sections = re.split(
+            r"\n(?=[A-Z][A-Z\s]+(?:\n|$))",
+            text
+        )
+
+        section_index = 0
+
+        for section in sections:
+
+            section = section.strip()
+
+            if not section:
+                continue
+
+            chunks.append({
+
+                "id": (
+                    f"{document['source']}"
+                    f"_{section_index}"
+                ),
+
+                "source": document["source"],
+
+                "text": section
+
+            })
+
+            section_index += 1
+
+    if not chunks:
+        raise ValueError(
+            "No document chunks were generated."
+        )
+
+    print(
+        f"Chunks created: {len(chunks)}"
     )
 
-    section_index = 0
-
-    for section in sections:
-
-        section = section.strip()
-
-        if not section:
-            continue
-
-        chunks.append({
-            "id": (
-                f"{document['source']}"
-                f"_{section_index}"
-            ),
-            "source": document["source"],
-            "text": section
-        })
-
-        section_index += 1
-
-print(
-    f"Chunks created: {len(chunks)}"
-)
+    return chunks
 
 
 # ============================================================
-# EMBEDDING MODEL
+# CHROMADB CLIENT
 # ============================================================
 
-embedding_model = SentenceTransformer(
-    "sentence-transformers/all-MiniLM-L6-v2"
-)
+@lru_cache(maxsize=1)
+def get_chroma_client():
 
-print(
-    "Embedding model loaded"
-)
+    CHROMA_DIR.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-
-# ============================================================
-# CREATE EMBEDDINGS
-# ============================================================
-
-texts = [
-    chunk["text"]
-    for chunk in chunks
-]
-
-embeddings = embedding_model.encode(
-    texts,
-    show_progress_bar=True
-)
-
-
-print(
-    "Embeddings created:",
-    embeddings.shape
-)
+    return chromadb.PersistentClient(
+        path=str(CHROMA_DIR)
+    )
 
 
 # ============================================================
-# CHROMADB
+# CREATE OR RETRIEVE COLLECTION
 # ============================================================
 
-client = chromadb.PersistentClient(
-    path=str(CHROMA_DIR)
-)
+def get_or_create_knowledge_collection():
 
-collection = client.get_or_create_collection(
-    name="manufacturing_knowledge"
-)
+    client = get_chroma_client()
 
-
-# ============================================================
-# STORE DOCUMENTS
-# ============================================================
-
-collection.upsert(
-    ids=[
-        chunk["id"]
-        for chunk in chunks
-    ],
-
-    documents=texts,
-
-    embeddings=[
-        embedding.tolist()
-        for embedding in embeddings
-    ],
-
-    metadatas=[
-        {
-            "source": chunk["source"]
+    collection = client.get_or_create_collection(
+        name=COLLECTION_NAME,
+        metadata={
+            "description": "Manufacturing maintenance knowledge"
         }
+    )
+
+    # Check whether the collection already contains data.
+
+    if collection.count() > 0:
+
+        print(
+            f"Existing ChromaDB collection found: "
+            f"{collection.count()} records"
+        )
+
+        return collection
+
+    # Collection is missing or empty.
+    # Automatically ingest knowledge documents.
+
+    print(
+        "ChromaDB collection is empty."
+    )
+
+    print(
+        "Starting automatic knowledge ingestion..."
+    )
+
+    documents = load_documents()
+
+    chunks = create_chunks(
+        documents
+    )
+
+    embedding_model = get_embedding_model()
+
+    texts = [
+        chunk["text"]
         for chunk in chunks
     ]
-)
+
+    embeddings = embedding_model.encode(
+        texts,
+        show_progress_bar=False
+    )
+
+    collection.upsert(
+
+        ids=[
+            chunk["id"]
+            for chunk in chunks
+        ],
+
+        documents=texts,
+
+        embeddings=[
+            embedding.tolist()
+            for embedding in embeddings
+        ],
+
+        metadatas=[
+            {
+                "source": chunk["source"]
+            }
+            for chunk in chunks
+        ]
+    )
+
+    print("=" * 50)
+    print("RAG INGESTION COMPLETE")
+    print("=" * 50)
+
+    print(
+        "Documents:",
+        len(documents)
+    )
+
+    print(
+        "Chunks:",
+        collection.count()
+    )
+
+    print(
+        "Collection:",
+        collection.name
+    )
+
+    return collection
 
 
-print("=" * 50)
-print("RAG INGESTION COMPLETE")
-print("=" * 50)
+# ============================================================
+# MANUAL INGESTION TEST
+# ============================================================
 
-print(
-    "Documents:",
-    len(documents)
-)
+if __name__ == "__main__":
 
-print(
-    "Chunks:",
-    len(chunks)
-)
+    collection = get_or_create_knowledge_collection()
 
-print(
-    "Stored in:",
-    CHROMA_DIR
-)
+    print("\nINGESTION STATUS")
+    print("------------------------------")
 
-print(
-    "Collection:",
-    collection.name
-)
+    print(
+        "Collection:",
+        collection.name
+    )
+
+    print(
+        "Total records:",
+        collection.count()
+    )

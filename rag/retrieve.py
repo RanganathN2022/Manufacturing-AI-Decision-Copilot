@@ -1,38 +1,25 @@
-from pathlib import Path
 
-from sentence_transformers import SentenceTransformer
-import chromadb
-
-
-# ============================================================
-# PATHS
-# ============================================================
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-CHROMA_DIR = BASE_DIR / "chroma_db"
-
-
-# ============================================================
-# LOAD EMBEDDING MODEL
-# ============================================================
-
-embedding_model = SentenceTransformer(
-    "sentence-transformers/all-MiniLM-L6-v2"
+from rag.ingest import (
+    get_embedding_model,
+    get_or_create_knowledge_collection
 )
 
 
 # ============================================================
-# CONNECT TO CHROMADB
+# INITIALIZE RAG
 # ============================================================
 
-client = chromadb.PersistentClient(
-    path=str(CHROMA_DIR)
-)
+print("Initializing Manufacturing Knowledge Assistant...")
 
-collection = client.get_collection(
-    name="manufacturing_knowledge"
-)
+# Automatically creates and populates collection if needed.
+
+collection = get_or_create_knowledge_collection()
+
+# Reuse the same embedding model.
+
+embedding_model = get_embedding_model()
+
+print("RAG initialization successful.")
 
 
 # ============================================================
@@ -44,37 +31,94 @@ def retrieve_knowledge(
     top_k=2
 ):
     """
-    Retrieve the most relevant maintenance
-    knowledge chunks for a user query.
+    Retrieve relevant manufacturing maintenance
+    knowledge using semantic similarity.
     """
+
+    if not query or not query.strip():
+
+        raise ValueError(
+            "Search query cannot be empty."
+        )
+
+    if top_k < 1:
+
+        raise ValueError(
+            "top_k must be at least 1."
+        )
+
+    total_records = collection.count()
+
+    if total_records == 0:
+
+        raise RuntimeError(
+            "ChromaDB collection contains no documents."
+        )
+
+    # Generate query embedding.
 
     query_embedding = embedding_model.encode(
         [query]
     )
 
+    # Retrieve relevant documents.
+
     results = collection.query(
+
         query_embeddings=[
             query_embedding[0].tolist()
         ],
-        n_results=top_k
+
+        n_results=min(
+            top_k,
+            total_records
+        ),
+
+        include=[
+            "documents",
+            "metadatas",
+            "distances"
+        ]
     )
 
     retrieved_documents = []
 
-    for i, document in enumerate(
-        results["documents"][0]
-    ):
+    documents = results.get(
+        "documents", [[]]
+    )[0]
+
+    metadatas = results.get(
+        "metadatas", [[]]
+    )[0]
+
+    distances = results.get(
+        "distances", [[]]
+    )[0]
+
+    for index, document in enumerate(documents):
+
+        metadata = (
+            metadatas[index] or {}
+        )
 
         retrieved_documents.append({
+
             "document": document,
-            "source": results["metadatas"][0][i]["source"],
-            "distance": results["distances"][0][i]
+
+            "source": metadata.get(
+                "source",
+                "Unknown"
+            ),
+
+            "distance": distances[index]
+
         })
 
     return retrieved_documents
 
+
 # ============================================================
-# TEST
+# RETRIEVAL TEST
 # ============================================================
 
 if __name__ == "__main__":
@@ -84,15 +128,24 @@ if __name__ == "__main__":
         "What should the maintenance team inspect?"
     )
 
-    results = retrieve_knowledge(query)
+    results = retrieve_knowledge(
+        query,
+        top_k=2
+    )
 
-    print("=" * 60)
+    print("\n" + "=" * 60)
     print("RAG RETRIEVAL TEST")
     print("=" * 60)
 
-    for index, result in enumerate(results, start=1):
+    for index, result in enumerate(
+        results,
+        start=1
+    ):
 
-        print(f"\nResult {index}")
+        print(
+            f"\nResult {index}"
+        )
+
         print("-" * 60)
 
         print(
